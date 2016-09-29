@@ -9,11 +9,11 @@
     var orb = null
     function Orb(target) {
         HTMLWidget.call(this);
-  //       this.fields =[];
-		// this.savedFields = [];
-		// this.rowsavFields = [];
-		// this.dataFields = [];
-		// this.columnFields = [];
+        this.fields =[];
+		this.savedFields = [];
+		this.rowsavFields = [];
+		this.dataFields = [];
+		this.columnFields = [];
 
     }
 
@@ -24,11 +24,11 @@ function mapping(owner){
 }
 
 
-var fields =[];
-var savedField = [];
-var rowFields = [];
-var dataFields = [];
-var columnFields = [];
+// var fields =[];
+// var savedField = [];
+// var rowFields = [];
+// var dataFields = [];
+// var columnFields = [];
 
 
 
