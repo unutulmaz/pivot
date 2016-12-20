@@ -14,7 +14,7 @@
 
     Mapping.prototype = Object.create(PropertyExt.prototype);
     Mapping.prototype.constructor = Mapping;
-    Mapping.prototype._class += " react_Orb";
+    Mapping.prototype._class += " react_Orb.Mapping";
     Mapping.prototype.publish("addField", "", "set", "Show Toolbox or not",function() { return this._owner ? this._owner.columns() : [];}, {optional: true} );
     Mapping.prototype.publish("location", true, "set", "Data Location",['row','column','data'], { tags: ["basic"] });
     Mapping.prototype.publish("aggregateFunc", "", "set", "Aggregate Function type",['sum','count','min','max','avg','prod','var','varp','stdev','stdevp'], {optional: true} );
@@ -225,7 +225,7 @@
             for (var n=0;n<this.orbFields.length;n++){
 
                 if (this.orbFields[n].caption === eachField){
-                    
+
                     var ft = row.formatFunction();
                     this.orbFields[n].dataSettings={
                     aggregateFunc:row.aggregateFunc(),
