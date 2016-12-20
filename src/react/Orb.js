@@ -1,317 +1,274 @@
-﻿"use strict";
+"use strict";
 (function (root, factory) {
     if (typeof define === "function" && define.amd) {
-        define(["d3","src/common/HTMLWidget","../common/Utility","../common/PropertyExt","css!orb", "css!./Orb"], factory);
+        define(["d3","../common/HTMLWidget","../common/Utility","../common/PropertyExt","css!orb", "css!./Orb"], factory);
     } else {
         root.template_Orb = factory(root.d3, root.common_HTMLWidget, root.common_Utility, root.common_PropertyExt, root.React);
     }
-}(this, function (d3, HTMLWidget, Utility, PropertyExt) {
-    var orb = null
+}(this, function (d3, HTMLWidget, Utility, PropertyExt){
+    
+    function Mapping(owner){
+        PropertyExt.call(this);
+        this._owner = owner;
+    }
+
+    Mapping.prototype = Object.create(PropertyExt.prototype);
+    Mapping.prototype.constructor = Mapping;
+    Mapping.prototype._class += " react_Orb";
+    Mapping.prototype.publish("addField", "", "set", "Show Toolbox or not",function() { return this._owner ? this._owner.columns() : [];}, {optional: true} );
+    Mapping.prototype.publish("location", true, "set", "Data Location",['row','column','data'], { tags: ["basic"] });
+    Mapping.prototype.publish("aggregateFunc", "", "set", "Aggregate Function type",['sum','count','min','max','avg','prod','var','varp','stdev','stdevp'], {optional: true} );
+    Mapping.prototype.publish("formatFunction","","string","Format function");
+
+    var ReactOrb = null;
     function Orb(target) {
         HTMLWidget.call(this);
-        this.fields =[];
-		this.savedFields = [];
-		this.rowsavFields = [];
-		this.dataFields = [];
-		this.columnFields = [];
+        this.orbFields =[];
+        this.savedField = [];
+        this.rowFields = [];
+        this.dataFields = [];
+        this.columnFields = [];
+        this.prevOrbConfig = '';
 
     }
 
 
-function mapping(owner){
-	PropertyExt.call(this);
-	this._owner = owner;
-}
 
+    Orb.prototype._OrbTypes = [{id:"PIVOT", display:"Pivot Table",widgetClass: "react_Orb"}];
 
-// var fields =[];
-// var savedField = [];
-// var rowFields = [];
-// var dataFields = [];
-// var columnFields = [];
+    Orb.prototype = Object.create(HTMLWidget.prototype);
+    Orb.prototype.constructor = Orb;
+    Orb.prototype._class += " react_Orb";
 
+    Orb.prototype.Mapping = Mapping;
+    Orb.prototype.publish("stringProp", "defaultValue", "string", "Sample Property");
 
+    Orb.prototype.publish("toolbar", true, "boolean", "Show Toolbox or not", null, { tags: ["basic"] });
+    Orb.prototype.publish("themeColor", "blue", "set", "Theme color", ['blue','red','black','green'], { tags: ["basic"] });
+    Orb.prototype.publish("newField" ,[], "propertyArray", "Source Columns", null, { autoExpand : Mapping});
+    // Orb.prototype.publish("removeField", "", "set", "Show Toolbox or not", Orb.prototype.columns,{ tags: ["basic"] },{optional: true});
 
+    Orb.prototype.publish("columnGrandTotal", true, "boolean", "Show Grand total or not");
+    Orb.prototype.publish("rowGrandTotal", true, "boolean", "Show Grand total or not");
+    Orb.prototype.publish("movable", true, "boolean", "Fields can be moved or not");
 
+        
+    Orb.prototype.orbConfig = function (ds,fs,rowFields,columnFields,dataFields) {
 
-mapping.prototype = Object.create(PropertyExt.prototype);
-mapping.prototype.constructor = mapping;
-mapping.prototype._class += " react_Orb";
-mapping.prototype.publish("addField", "", "set", "Show Toolbox or not",function() { return this._owner ? this._owner.columns() : [];}, {optional: true} );
-mapping.prototype.publish("location", true, "set", "Data Location",['row','column','data'], { tags: ["basic"] });
-mapping.prototype.publish("aggregateFunc", "", "set", "Aggregate Function type",['sum','count','min','max','avg','prod','var','varp','stdev','stdevp'], {optional: true} );
-mapping.prototype.publish("formatFunction","","string","Format function");
+        var config = {
 
+            dataSource:ds,
+            canMoveFields: this.movable(), 
+            dataHeadersLocation: 'columns',
+            width: 2000,
+            height: 711,
+            theme: this.themeColor(),
+            toolbar: {
+                visible: this.toolbar()
+            },
+            grandTotal: {
+                rowsvisible: this.rowGrandTotal(),
+                columnsvisible: this.columnGrandTotal()
+            },
+            subTotal: {
+                visible: true,
+                collapsed: false,
+                collapsible: true
+            },
+            rowSettings: {
+                subTotal: {
+                    visible: true,
+                    collapsed: false,
+                    collapsible: true
+                }
+            },
+            columnSettings: {
+                subTotal: {
+                    visible: true,
+                    collapsed: false,
+                    collapsible: true
+                }
+            },
+            fields: fs,
+            rows: this.rowFields,
+            columns: this.columnFields,
+            data: this.dataFields
 
+        };
 
-
-
-
-
-Orb.prototype = Object.create(HTMLWidget.prototype);
-Orb.prototype.constructor = Orb;
-Orb.prototype._class += " react_Orb";
-
-Orb.prototype.mapping = mapping;
-Orb.prototype.publish("stringProp", "defaultValue", "string", "Sample Property");
-
-Orb.prototype.publish("toolbar", true, "boolean", "Show Toolbox or not", null, { tags: ["basic"] });
-Orb.prototype.publish("themeColor", "blue", "set", "Theme color", ['blue','red','black','green'], { tags: ["basic"] });
-Orb.prototype.publish("newField" ,[], "propertyArray", "Source Columns", null, { autoExpand : mapping});
-Orb.prototype.publish("removeField", "", "set", "Show Toolbox or not", Orb.prototype.columns,{ tags: ["basic"] },{optional: true});
-
-Orb.prototype.publish("columnGrandTotal", true, "boolean", "Show Grand total or not");
-Orb.prototype.publish("rowGrandTotal", true, "boolean", "Show Grand total or not");
-Orb.prototype.publish("movable", true, "boolean", "Fields can be moved or not");
-
-    
-
-
-
-
-
-	Orb.prototype.orbConfig = function (ds,fs,rowFields,columnFields,dataFields) {
-
-    	var config = {
-	  
-			dataSource:ds,
-			canMoveFields: this.movable(), 
-	        dataHeadersLocation: 'columns',
-	        width: 1199,
-	        height: 711,
-	        theme: this.themeColor(),
-	        toolbar: {
-	            visible: this.toolbar()
-	        },
-	        grandTotal: {
-	            rowsvisible: this.rowGrandTotal(),
-	            columnsvisible: this.columnGrandTotal()
-	        },
-	        subTotal: {
-	            visible: true,
-	            collapsed: false,
-	            collapsible: true
-	        },
-	        rowSettings: {
-	            subTotal: {
-	                visible: true,
-	                collapsed: false,
-	                collapsible: true
-	            }
-	        },
-	        columnSettings: {
-	            subTotal: {
-	                visible: true,
-	                collapsed: false,
-	                collapsible: true
-	            }
-	        },
-	        fields: fs,
-	        rows: rowFields,
-	        columns: columnFields,
-	        data: dataFields
-
-	    }
-
-	    return config;
-	    	
+        return config;
     };
-    
 
     Orb.prototype.enter = function (domNode, element) {
         
         HTMLWidget.prototype.enter.apply(this, arguments);
-
-        var ds = this.data();
-		var columns = this.columns();
-
-        this._div = element.append("div").attr("id", this.id() + "_orb")
-       
-        
-
-        this._orb = new orb.pgridwidget(this.orbConfig())
-	    this._orb.render(document.getElementById(this.id() + "_orb"));
-              
-        
+        // this._div = element.append("div").attr("id", this.id() + "_orb");
+        // this._orb = new orb.pgridwidget(this.orbConfig());
+        // this._orb.render(document.getElementById(this.id() + "_orb"));
+        this._orbDiv = element.append("div");
+        this._orb = new ReactOrb.pgridwidget(this.orbConfig());
+        this._orb.render(this._orbDiv.node());
+        var context = this;
+        // setInterval(function () {
+        //     context.saveOrbConfig();
+        // }, 1000);      
     };
 
 
     Orb.prototype.update = function (domNode, element) { 
-    
-		HTMLWidget.prototype.update.apply(this, arguments);      
+        
+        HTMLWidget.prototype.update.apply(this, arguments);
 
-		var ds = this.data();
-		var columns = this.columns();
-               
-       for (var i=0;i<fields.length;i++){
-       		if (savedField.indexOf(fields[i].caption) == -1){
-       			savedField.push(fields[i].caption);
-       		}
-       		
-       }
-  	
+        var ds = this.data();
+        var columns = this.columns();
 
-    	for (var k=0;k<this.newField().length;k++){
-    		if (savedField.indexOf(this.newField()[k].__prop_addField) == -1){
+        // var allColumns = this.columns().map(function (column, idx) {
+        //         return {
+        //             name: "" + idx,
+        //             caption: column
+        //         };
+        //     });
+                   
+        for (var i=0;i<this.orbFields.length;i++){
+            if (this.savedField.indexOf(this.orbFields[i].caption) === -1){
+                this.savedField.push(this.orbFields[i].caption);
+                }
 
-    		   var fieldIndex = columns.indexOf(this.newField()[k].__prop_addField);
+        }
 
-    		   if (fieldIndex != -1){
-	    		   fields.push({
-	    		   		name: fieldIndex.toString(),
-	    		   		caption: this.newField()[k].__prop_addField
-	    		   })
-    		   }
-    		  
-    		
-	       }
-    	}
+        this.newField().forEach(function(row,idx){
+            var eachField = row.__prop_addField;
+            if (this.savedField.indexOf(eachField) === -1){
 
-       	
-    	for (var k=0; k<this.newField().length; k++){
-    		// if (this.newField()[k].__prop_addField != null && savedTableField.indexOf(this.newField()[k].__prop_addField) == -1){
-    		if (this.newField()[k].__prop_addField != null){
-    			switch(this.newField()[k].__prop_location){    				
+                var fieldIndex = columns.indexOf(eachField);
+                if (fieldIndex !== -1){
+                    this.orbFields.push({
+                    name: fieldIndex.toString(),
+                    caption: eachField
+                    });
+                }   
 
-    				case 'row':
-    					if (rowFields.indexOf(this.newField()[k].__prop_addField) == -1){
-    						rowFields.push(this.newField()[k].__prop_addField);
-    						// savedTableField.push(this.newField()[k].__prop_addField);
+            }
 
-    						var columnIndex = columnFields.indexOf(this.newField()[k].__prop_addField);
-    						var dataIndex = dataFields.indexOf(this.newField()[k].__prop_addField);
-    						if (columnIndex > -1){
-    							columnFields.splice(columnIndex,1)
-    						}
-    						if (dataIndex > -1){
-    							dataFields.splice(dataIndex,1)
-    						}
-    					}
-    					
-    					break;
+        },this);
 
-    				case 'column':
-	    				if (columnFields.indexOf(this.newField()[k].__prop_addField) == -1){
-	    					columnFields.push(this.newField()[k].__prop_addField);
-	    					// savedTableField.push(this.newField()[k].__prop_addField);
+        this.newField().forEach(function(row,idx){
 
-		    				var rowIndex = rowFields.indexOf(this.newField()[k].__prop_addField);
-							var dataIndex = dataFields.indexOf(this.newField()[k].__prop_addField);
-							if (rowIndex > -1){
-								rowFields.splice(columnIndex,1)
-								}
-							if (dataIndex > -1){
-								dataFields.splice(dataIndex,1)
-								}
+            var eachField = row.__prop_addField;
 
-		    				}
-	    					break;
-
-    				case 'data':
-	    				if (dataFields.indexOf(this.newField()[k].__prop_addField) == -1){
-	    					dataFields.push(this.newField()[k].__prop_addField);
-	    					// savedTableField.push(this.newField()[k].__prop_addField);
-
-	    					var rowIndex = rowFields.indexOf(this.newField()[k].__prop_addField);
-							var columnIndex = columnFields.indexOf(this.newField()[k].__prop_addField);
-							if (rowIndex > -1){
-								rowFields.splice(columnIndex,1)
-								}
-							if (columnIndex > -1){
-								columnFields.splice(dataIndex,1)
-								}
-	    					
-	    				}
-
-	    				break;
-    			}
-    		}
-    	}
+            var columnIndex = this.columnFields.indexOf(eachField);
+            var dataIndex = this.dataFields.indexOf(eachField);
+            var rowIndex = this.rowFields.indexOf(eachField);
 
 
+            if (eachField !== null){
 
-    	for (var k=0; k<this.newField().length; k++){
-    		
-			for (var i=0;i<fields.length;i++){
-				
-				if (fields[i].caption == this.newField()[k].__prop_addField){
-					let ft = this.newField()[k].__prop_formatFunction;
+                switch(row.__prop_location){        
 
-					fields[i].dataSettings={
-						aggregateFunc:this.newField()[k].__prop_aggregateFunc,
-						formatFunc:function(value){
-							return d3.format(ft)(value);
-						}						
-					}
+                    case "row":
+                        if (rowIndex === -1){
+                            this.rowFields.push(eachField);
+
+                            if (columnIndex > -1){
+                                this.columnFields.splice(columnIndex,1);
+                            }
+                            if (dataIndex > -1){
+                                this.dataFields.splice(dataIndex,1);
+                            }
+                        }
+
+                        break;
+
+                    case "column":
+                        if (columnIndex === -1){
+                            this.columnFields.push(eachField);
+
+                        if (rowIndex > -1){
+                            this.rowFields.splice(columnIndex,1);
+                            }
+                        if (dataIndex > -1){
+                            this.dataFields.splice(dataIndex,1);
+                            }
+
+                        }
+                        break;
+
+                    case "data":
+                        if (dataIndex === -1){
+                            this.dataFields.push(eachField);
+
+                        if (rowIndex > -1){
+                            this.rowFields.splice(columnIndex,1);
+                            }
+                        if (columnIndex > -1){
+                            this.columnFields.splice(dataIndex,1);
+                            }
+
+                        }
+                        break;
+                    }
+            }
+
+        },this);
 
 
-				}
-				
-			}
-		}
+        function createFormatFunction(ft) {
+            return function (value) {
+                return d3.format(ft)(value);
+            };
+        }
 
-    	
-    	if (this.removeField()){
-    		for (var i=0;i<fields.length;i++){
-    			if (fields[i].caption == this.removeField()){
-    				fields.splice(i,1);
-    				break;
+        this.newField().forEach(function(row,idx){
 
-    			}
-    		}
+            var eachField = row.__prop_addField;
 
-    		for (var i=0;i<rowFields.length;i++){
-    			if (rowFields[i] ==this.removeField()){
-    				rowFields.splice(i,1);
-    				break;
-    			}
-    		}
+            for (var n=0;n<this.orbFields.length;n++){
 
-    		for (var i=0;i<columnFields.length;i++){
-    			if (columnFields[i] ==this.removeField()){
-    				columnFields.splice(i,1);
-    				break;
-    			}
-    		}
+                if (this.orbFields[n].caption === eachField){
+                    
+                    var ft = row.formatFunction();
+                    this.orbFields[n].dataSettings={
+                    aggregateFunc:row.aggregateFunc(),
+                    formatFunc: createFormatFunction(ft)
+                    };
 
-    		for (var i=0;i<dataFields.length;i++){
-    			if (dataFields[i] ==this.removeField()){
-    				dataFields.splice(i,1);
-    				break;
-    			}
-    		}
-    	}
-    	
 
-    	
-    	React.unmountComponentAtNode(document.getElementById(this.id() + "_orb"));
-    	this._div = element.append("div").attr("id", this.id() + "_orb")
-    	
- 
-    	this._orb = new orb.pgridwidget(this.orbConfig(ds,fields,rowFields,columnFields,dataFields))
+                }
 
-        this._orb.render(document.getElementById(this.id() + "_orb"));
+            }
 
-       
-	        
-	   
- 		
+        },this);
+
+        // console.log(this.newField()[0]);
+
+        var orbCurrentConfig = this.orbConfig(ds,this.orbFields,this.rowFields,this.columnFields,this.dataFields);
+        if (this.prevOrbConfig !== JSON.stringify(orbCurrentConfig)){
+            var react = React;
+            react.unmountComponentAtNode(this._orbDiv.node());
+            this.prevOrbConfig = orbCurrentConfig;
+        }
+        
+        this._orbDiv = element.append("div");
+        this._orb = new ReactOrb.pgridwidget(orbCurrentConfig);
+        this._orb.render(this._orbDiv.node());
+        this._orb.refreshData(this.data());
+
     };
 
     Orb.prototype.exit = function (domNode, element) {
-        
-        this._div.remove();
+
+        this._orbDiv.remove();
         HTMLWidget.prototype.exit.apply(this, arguments);
     };
 
-    Orb.prototype.render = function (domNode, element) {
-        if (!orb) {
+    Orb.prototype.render = function (domNode, element){
+        if (!ReactOrb) {
             var context = this;
             var args = arguments;
             require(["orb-react"], function (React) {
                 window.React = window.React || React;
                 require(["orb"], function (_orb) {
-                    orb = _orb;
+                    ReactOrb = _orb;
                     HTMLWidget.prototype.render.apply(context, args);
                 });
             });
@@ -320,5 +277,5 @@ Orb.prototype.publish("movable", true, "boolean", "Fields can be moved or not");
         }
     };
 
-    return Orb;
-}));
+        return Orb;
+    }));
