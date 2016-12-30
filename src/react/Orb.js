@@ -239,8 +239,6 @@
 
         },this);
 
-        // console.log(this.newField()[0]);
-
         var orbCurrentConfig = this.orbConfig(ds,this.orbFields,this.rowFields,this.columnFields,this.dataFields);
         if (this.prevOrbConfig !== JSON.stringify(orbCurrentConfig)){
             var react = React;
