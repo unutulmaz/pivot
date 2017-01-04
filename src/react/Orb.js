@@ -130,7 +130,7 @@
 
     	fieldIndex = this.dataFields.indexOf(field);
     	if (fieldIndex > -1){
-    		this.rowFields.splice(dataIndex);
+    		this.dataFields.splice(fieldIndex);
     	}
 
     	this.orbFields.forEach(function(item,index,object){
